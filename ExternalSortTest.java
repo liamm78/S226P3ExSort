@@ -1,3 +1,4 @@
+import java.io.RandomAccessFile;
 import student.TestCase;
 
 /**
@@ -65,5 +66,25 @@ public class ExternalSortTest extends TestCase
         throws Exception
     {
         sortHelper(1);
+        
+    }
+    
+    public void testFile() 
+        throws Exception
+    {
+        FileGenerator it = new FileGenerator();
+        it.generateFile("newFile", 50000, "b");
+        
+        ExternalSort.sort("newFile");
+        
     }
 }
+
+
+
+
+
+
+
+
+
