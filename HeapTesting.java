@@ -1,89 +1,88 @@
+import java.util.*;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.*;
 import java.nio.channels.FileChannel;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.io.*;
 
-// The External Sort implementation
-// -------------------------------------------------------------------------
-/**
- *
- * @author {Your Name Here}
- * @version Spring 2026
- */
-public class ExternalSort {
+public class HeapTesting {
 
-    /**
-     * The working memory available to the program: 50,000 bytes
-     */
-    private static final int MEMBYTES = 50000;    
-    private static final int BLOCKSIZE = 4096;
-    private static final int OUTBUFFER = 45056;
-
-    //Allocate 50,000 bytes of working memory
     private static byte[] wm;
     
-    //tracks the amount of data in working memory
     private static int size;
     
-    /**
-     * Create a new ExternalSort object.
-     * @param theFileName The name of the file to be sorted
-     *
-     * @throws IOException
-     */
-    public static void sort(String theFileName)
-        throws IOException
-    {
-        //for debugging, delete later FIXME
-        File tempfile = new File(theFileName);
-        System.out.println("Input file size: " + tempfile.length());
+    private static int OUTBUFFER;
+    
+    static private Random value = new Random();
+    
+    public static void main(String[] args) throws IOException {
         
-        wm = new byte[MEMBYTES];
-        size = 0;
-                
+        //build an array of bytes
+        buildArr(1);
+        //clear the temp.bin
+        ExternalSort.clearTemp();
+        //sort temp.bin
+        heapify();     
+        heapSort();
         
-        //create a randomAccessFile, file channel, and byteBuffer
-        RandomAccessFile raf = new RandomAccessFile(theFileName, "rw");
+        //prepare to read from temp.bin
+        File tempfile = new File("temp.bin");
+        RandomAccessFile raf = new RandomAccessFile("temp.bin", "rw");
         FileChannel channel = raf.getChannel();        
-        ByteBuffer buffer = ByteBuffer.allocate(BLOCKSIZE);
+        ByteBuffer buffer = ByteBuffer.allocate(4096);
         
-        //the offset of working memory
+        //read from temp.bin
         int offset = 0;
-        //load up to 11 blocks into the workingMem
         for(int i = 0; i < 11; i++) {
             int bytesRead = channel.read(buffer);
             if (bytesRead == -1) break;
-            size += bytesRead;
             
             buffer.flip();
             
-            buffer.get(wm, offset, BLOCKSIZE);
-            offset+= BLOCKSIZE;
+            buffer.get(wm, offset, 4096);
+            offset+= 4096;
             
             buffer.clear();
         }
-        size /= 8;
         
-        heapify();
-        heapSort();
-        
-        raf.close();
-        
-        SortUtils.copyFile("temp.bin", theFileName);
-//        Files.delete(Paths.get(theFileName));
-//        Files.move(Paths.get("temp.bin"), Paths.get(theFileName));
-//        Files.move(Paths.get("temp.bin"), Paths.get(theFileName), StandardCopyOption.REPLACE_EXISTING);
+        //print the sorted array
+        print();
     }
+    
+    
+    public static void buildArr(int blocks) {
+        wm = new byte[(blocks + 1) * 4096];
+        size = blocks * 512; 
+        OUTBUFFER = 4096 * blocks;
+        int dataval, keyval;
         
-        // Call heapify on the entire working memory to initially sort the data
-        //heapify()
-        // in a loop, call heapSort, which will fill output buffer and then flush it. it does it up to 11 times
-        //heapSort() 
+        for (int i = 0; i < blocks; i++) {
+            for (int j = 0; j < 512; j++) {
+                dataval = random(2000000000) + 1;
+                keyval = random(2000000000) + 1;
+                int offset = 512 * i + 8 * j;
+                ByteBuffer.wrap(wm, offset, 4).putInt(keyval);
+                ByteBuffer.wrap(wm, offset + 4, 4).putInt(dataval);
+            }
+        }
+        
+    }
     
+    private static int random(int n) {
+        return Math.abs(value.nextInt()) % n;
+    }
     
-    //takes the ith record and sorts it in the heap
+    private static void heapify() {
+        int start = (size - 2) / 2;
+        for (int i = start; i >= 0; i--)
+        {
+            percDown(i);
+        }
+    }
+    
     private static void percDown(int i)
     {
         //integer at the ith key's record
@@ -125,25 +124,15 @@ public class ExternalSort {
         }
     }
     
-    //calculate the last non-leaf node, then percDown that and every node before it
-    private static void heapify() {
-        int start = (size - 2) / 2;
-        for (int i = start; i >= 0; i--)
-        {
-            percDown(i);
-        }
-    }
-    
-    
-    //fill output buffer with sorted data by swapping the min(root) value of heap into the output buffer, putting the last node a the root, then percDown to sort it.
     public static void heapSort() throws IOException {
-        int blocks = size / (BLOCKSIZE / 8);
-        ByteBuffer buffer = ByteBuffer.allocate(BLOCKSIZE);
+        int oldSize = size;
+        int blocks = size / (512);
+        ByteBuffer buffer = ByteBuffer.allocate(4096);
         
         for (int i = 0; i < blocks; i++)
         {
             int buffOff = 0;
-            for (int j = 0; j < BLOCKSIZE / 8; j++) {
+            for (int j = 0; j < 512; j++) {
                 //set the appropriate spot in output buffer equal to the heap root
                 System.arraycopy(wm, 0, wm, OUTBUFFER + buffOff, 8);
                 //set the last record in the heap to the root, decrement size
@@ -155,7 +144,7 @@ public class ExternalSort {
             }
             buffer.clear();
             //put everything from the output buffer into a bytebuffer
-            buffer.put(wm, OUTBUFFER, BLOCKSIZE);
+            buffer.put(wm, OUTBUFFER, 4096);
             
             //create (or update) the temp.bin file
             try (DataOutputStream file =
@@ -169,21 +158,18 @@ public class ExternalSort {
                 file.close();
             }
         }
-        
-               
+        size = oldSize;
     }
     
-    public static void clearTemp() throws IOException {
-        new FileOutputStream("temp.bin").close();
+    public static void print() {
+        for (int i = 0; i < size; i++) {
+            int key = ByteBuffer.wrap(wm, i * 8, 4).getInt();
+            int value = ByteBuffer.wrap(wm, i * 8 + 4, 4).getInt();
+            System.out.println("Record " + i + " \t Key: " + key + "\t\tValue: " + value);
+        }
     }
+    
 }
-
-
-
-
-
-
-
 
 
 

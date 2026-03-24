@@ -33,7 +33,8 @@ public class ExternalSortTest extends TestCase
     public void sortHelper(int fileSize)
         throws Exception
     {
-
+        //clearing our tempfile each time
+        ExternalSort.clearTemp();
         FileGenerator it = new FileGenerator();
         String namea = "input" + fileSize + "asave.bin";
         String nameb = "input" + fileSize + "bsave.bin";
