@@ -14,10 +14,8 @@ public class ExternalSort {
     /**
      * The working memory available to the program: 50,000 bytes
      */
-    private static final int MEMBYTES = 50000;
-    
+    private static final int MEMBYTES = 50000;    
     private static final int BLOCKSIZE = 4096;
-    
     private static final int OUTBUFFER = 45056;
 
     //Allocate 50,000 bytes of working memory
@@ -50,8 +48,8 @@ public class ExternalSort {
         //load up to 11 blocks into the workingMem
         for(int i = 0; i < 11; i++) {
             int bytesRead = channel.read(buffer);
-            size += bytesRead;
             if (bytesRead == -1) break;
+            size += bytesRead;
             
             buffer.flip();
             
@@ -61,6 +59,11 @@ public class ExternalSort {
             buffer.clear();
         }
         size /= 8;
+        
+        heapify();
+        heapSort();
+        
+        raf.close();
     }
         
         // Call heapify on the entire working memory to initially sort the data
@@ -70,7 +73,7 @@ public class ExternalSort {
     
     
     //takes the ith record and sorts it in the heap
-    public void percDown(int i)
+    public static void percDown(int i)
     {
         //integer at the ith key's record
         int iKey = ByteBuffer.wrap(wm, i * 8, 4).getInt();
@@ -82,11 +85,11 @@ public class ExternalSort {
             //left child
             int l = 2 * i + 1;
             //left child's key integer
-            int lKey = ByteBuffer.wrap(wm, l, 4).getInt();
+            int lKey = ByteBuffer.wrap(wm, l * 8, 4).getInt();
             //right child, check to make sure it exists
             int r = 2 * i + 2;
             //right child 's key integer
-            int rKey = ByteBuffer.wrap(wm, l, 4).getInt();
+            int rKey = ByteBuffer.wrap(wm, r * 8, 4).getInt();
             
             //find the smallest child. default to left child if right is empty
             min = l;
@@ -100,9 +103,9 @@ public class ExternalSort {
             if (minKey < iKey) {
                 
                 byte[] temp = new byte[8];
-                System.arraycopy(wm, i, temp, 0, 8);
-                System.arraycopy(wm, min, wm, i, 8);
-                System.arraycopy(temp, 0, wm, min, 8);
+                System.arraycopy(wm, i * 8, temp, 0, 8);
+                System.arraycopy(wm, min * 8, wm, i * 8, 8);
+                System.arraycopy(temp, 0, wm, min * 8, 8);
                 
                 i = min;
             }
@@ -112,7 +115,7 @@ public class ExternalSort {
     }
     
     //calculate the last non-leaf node, then percDown that and every node before it
-    public void heapify() {
+    public static void heapify() {
         int start = (size - 2) / 2;
         for (int i = start; i >= 0; i--)
         {
@@ -121,27 +124,40 @@ public class ExternalSort {
     }
     
     //fill output buffer with sorted data by swapping the min(root) value of heap into the output buffer, putting the last node a the root, then percDown to sort it.
-    public void heapSort() {
-        int buffOff = 0;
+    public static void heapSort() throws IOException {
         int blocks = size / (BLOCKSIZE / 8);
+        ByteBuffer buffer = ByteBuffer.allocate(BLOCKSIZE);
         
         for (int i = 0; i < blocks; i++)
         {
-            for (int j = 0; 0 < BLOCKSIZE / 8; j++) {
+            int buffOff = 0;
+            for (int j = 0; j < BLOCKSIZE / 8; j++) {
                 //set the appropriate spot in output buffer equal to the heap root
                 System.arraycopy(wm, 0, wm, OUTBUFFER + buffOff, 8);
                 //set the last record in the heap to the root, decrement size
-                System.arraycopy(wm, (size - 1) * 4, wm, 0, 8);
-                size -= 8;
+                System.arraycopy(wm, (size - 1) * 8, wm, 0, 8);
+                size -= 1;
                 //percolate down the record to sort it correctly
                 percDown(0);
+                buffOff += 8;
             }
+            buffer.clear();
+            //put everything from the output buffer into a bytebuffer
+            buffer.put(wm, OUTBUFFER, BLOCKSIZE);
             
-            //here is where we need to flush the output buffer to the file. I don't know enough about creating and writing to files right now
-            
-        }
-        
-        
+            //create (or update) the temp.bin file
+            try (DataOutputStream file =
+                new DataOutputStream(new BufferedOutputStream(
+                    new FileOutputStream("temp.bin", true)))) {
+                
+                buffer.flip();
+                file.write(buffer.array());
+                
+                file.flush();
+                file.close();
+            }
+        }                   
+               
     }
 }
 
