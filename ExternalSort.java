@@ -72,15 +72,9 @@ public class ExternalSort {
         raf.close();
         
         SortUtils.copyFile("temp.bin", theFileName);
-//        Files.delete(Paths.get(theFileName));
-//        Files.move(Paths.get("temp.bin"), Paths.get(theFileName));
-//        Files.move(Paths.get("temp.bin"), Paths.get(theFileName), StandardCopyOption.REPLACE_EXISTING);
     }
         
-        // Call heapify on the entire working memory to initially sort the data
-        //heapify()
-        // in a loop, call heapSort, which will fill output buffer and then flush it. it does it up to 11 times
-        //heapSort() 
+ 
     
     
     //takes the ith record and sorts it in the heap
