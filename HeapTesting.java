@@ -25,8 +25,13 @@ public class HeapTesting {
         //clear the temp.bin
         ExternalSort.clearTemp();
         //sort temp.bin
-        heapify();     
+        System.out.println("Original List\n---------------\n");
+        print();
+        heapify();
+        System.out.println("\nAfter Heapifying\n---------------\n");
+        print();
         heapSort();
+
         
         //prepare to read from temp.bin
         File tempfile = new File("temp.bin");
@@ -49,6 +54,7 @@ public class HeapTesting {
         }
         
         //print the sorted array
+        System.out.println("\nAfter HeapSort\n---------------\n");
         print();
     }
     
