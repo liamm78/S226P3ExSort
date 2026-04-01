@@ -19,13 +19,17 @@ public class ExternalSort {
      */
     private static final int MEMBYTES = 50000;    
     private static final int BLOCKSIZE = 4096;
-    private static final int OUTBUFFER = 45056;
+    private static final int OUTBUFFER = 45056;      //This also happens to be the runsize, and we can use it like that
+    private static final int BUFF2 = 20480;     //NEW
+    private static final int OUTBUFFER2 = 40960; //NEW
 
     //Allocate 50,000 bytes of working memory
     private static byte[] wm;
     
     //tracks the amount of data in working memory
     private static int size;
+    
+    private static int runs;
     
     /**
      * Create a new ExternalSort object.
@@ -49,25 +53,33 @@ public class ExternalSort {
         FileChannel channel = raf.getChannel();        
         ByteBuffer buffer = ByteBuffer.allocate(BLOCKSIZE);
         
-        //the offset of working memory
-        int offset = 0;
-        //load up to 11 blocks into the workingMem
-        for(int i = 0; i < 11; i++) {
-            int bytesRead = channel.read(buffer);
-            if (bytesRead == -1) break;
-            size += bytesRead;
-            
-            buffer.flip();
-            
-            buffer.get(wm, offset, BLOCKSIZE);
-            offset+= BLOCKSIZE;
-            
-            buffer.clear();
-        }
-        size /= 8;
+        runs = (int) Math.ceil(channel.size() / OUTBUFFER);                 //NEW
         
-        heapify();
-        heapSort();
+        
+        while (channel.position() < channel.size())                         //NEW
+        {
+          //the offset of working memory
+            int offset = 0;
+            //load up to 11 blocks into the workingMem
+            for(int i = 0; i < 11; i++) {
+                int bytesRead = channel.read(buffer);
+                if (bytesRead == -1) break;
+                size += bytesRead;
+                
+                buffer.flip();
+                
+                buffer.get(wm, offset, BLOCKSIZE);
+                offset+= BLOCKSIZE;
+                
+                buffer.clear();
+            }
+            size /= 8;
+            
+            heapify();
+            heapSort();
+        }
+        
+        merge(theFileName);                                           //NEW, run the merge logic from here
         
         raf.close();
         
@@ -165,6 +177,41 @@ public class ExternalSort {
         }
         
                
+    }
+    
+    /*
+    *this will be the multi-way merge function. It assumes the temp.bin file is currently full of individually sorted runs
+    *either of 45056 bytes, or the last, smaller run of some multiple of 4096.
+    *
+    *it creates three buffers, two 5 block long buffers for each compared run, and one 2 block long for the new outbuffer 
+    *it will load in the data from each run, then compare them record by record until one of the two buffers runs out, and it will go get more data.
+    *whenever the outbuffer fills up, it flushes to the original input file.
+    *once both runs have been sorted, it will perform the same operation on the next pair of runs. 
+    *this continues until it has less then 2 runs left, in which case it either copies the remaining run to the input file, or ends this iteration
+    *it will then continue the process by merging the new, bigger runs back into the temp file.
+    *this bounces back and forth until we have one, completely sorted run, and then it will return.
+    */
+    public static void merge(String originFile)throws FileNotFoundException, IOException                              //NEW
+    {
+        //gives read access to the temp file
+        RandomAccessFile inFile = new RandomAccessFile("temp.bin", "rw");
+        FileChannel inChannel = inFile.getChannel();     
+        
+        //give access to the original input file, set it to the output file for this step
+        RandomAccessFile outFile = new RandomAccessFile(originFile, "rw");
+        FileChannel outChannel = outFile.getChannel();
+        
+        //create our buffer for moving data
+        ByteBuffer buffer = ByteBuffer.allocate(BLOCKSIZE * 2);
+        
+        //establish initial amount of runs
+        runs = (int) Math.ceil(inChannel.size() / OUTBUFFER);
+        
+        //merge runs back and forth between files while the amount of runs in the current input file is larger than 1
+        while (runs > 1) 
+        {
+            
+        }
     }
     
     public static void clearTemp() throws IOException {
