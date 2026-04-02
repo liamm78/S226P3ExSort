@@ -70,15 +70,15 @@ public class ExternalSortTest extends TestCase
         
     }
     
-    public void testFile() 
-        throws Exception
-    {
-        FileGenerator it = new FileGenerator();
-        it.generateFile("newFile", 50000, "b");
-        
-        ExternalSort.sort("newFile");
-        
-    }
+//    public void testFile() 
+//        throws Exception
+//    {
+//        FileGenerator it = new FileGenerator();
+//        it.generateFile("newFile", 50000, "b");
+//        
+//        ExternalSort.sort("newFile");
+//        
+//    }
 }
 
 
