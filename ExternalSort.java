@@ -318,11 +318,11 @@ public class ExternalSort {
                 System.out.println("On run " + i);
 
                 // Compute actual sizes of each run
-                long fileSize = inFile.length();
+                long theFileSize = inFile.length();
                 long run1Start = (long)i * runSize;
                 long run2Start = (long)(i + 1) * runSize;
-                long run1Total = Math.min(runSize, fileSize - run1Start);
-                long run2Total = Math.min(runSize, Math.max(0, fileSize
+                long run1Total = Math.min(runSize, theFileSize - run1Start);
+                long run2Total = Math.min(runSize, Math.max(0, theFileSize
                     - run2Start));
 
                 int outCount = 0;
