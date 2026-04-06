@@ -13,16 +13,19 @@
 //    
 //    private static int size;
 //    
-//    private static int OUTBUFFER;
+//    private static final int BLOCKS = 40;
+//    private static final int MEMBYTES = 50000;
+//    private static final int BLOCKSIZE = 4096;
+//    private static final int OUTBUFFER = 4096*BLOCKS;  // Heap size
+//    private static final int SIZE = 4096*BLOCKS;
+//    
 //    
 //    static private Random value = new Random();
 //    
 //    public static void main(String[] args) throws Exception {
-//        int blocks = 1;
-//        int size = blocks*512;
 //        
 //        //build an array of bytes
-//        buildArr(blocks);
+//        buildArr(BLOCKS);
 //        //clear the temp.bin
 //        ExternalSort.clearTemp();
 //        //sort temp.bin
@@ -60,14 +63,12 @@
 //        
 //        
 //        CheckFile check = new CheckFile();
-//        System.out.println(check.checkFile("temp.bin", blocks));
+//        System.out.println(check.checkFile("temp.bin", BLOCKS));
 //    }
 //    
-//    
+//    // Builds array/file
 //    public static void buildArr(int blocks) {
-//        wm = new byte[(blocks + 1) * 4096];
-//        size = blocks * 512; 
-//        OUTBUFFER = 4096 * blocks;
+//        wm = new byte[MEMBYTES];
 //        int dataval, keyval;
 //        
 //        for (int i = 0; i < blocks; i++) {
