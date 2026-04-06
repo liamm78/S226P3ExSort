@@ -15,15 +15,13 @@ import student.TestCase;
  * @author CS3114/5040 Staff
  * @version Spring 2026
  */
-public class ExternalSortTest extends TestCase
-{
+public class ExternalSortTest extends TestCase {
     private CheckFile fileChecker;
 
     /**
      * This method sets up the tests that follow.
      */
-    public void setUp()
-    {
+    public void setUp() {
         fileChecker = new CheckFile();
     }
 
@@ -33,13 +31,13 @@ public class ExternalSortTest extends TestCase
      * Helper method for the tests: Run a test suite for a given size.
      * Creates two files (one "ascii" and one "binary") of the specified size,
      * then for each one, runs the sort and runs the checker.
-     * @param fileSize Number of (4096 byte) blocks to test for
+     * 
+     * @param fileSize
+     *            Number of (4096 byte) blocks to test for
      * @throws Exception
      */
-    public void sortHelper(int fileSize)
-        throws Exception
-    {
-        //clearing our tempfile each time
+    public void sortHelper(int fileSize) throws Exception {
+        // clearing our tempfile each time
         ExternalSort.clearTemp();
         FileGenerator it = new FileGenerator();
         String namea = "input" + fileSize + "asave.bin";
@@ -67,67 +65,55 @@ public class ExternalSortTest extends TestCase
     // ----------------------------------------------------------
     /**
      * Test a file with 1 block
+     * 
      * @throws Exception
      */
-    public void test1()
-        throws Exception
-    {
-        sortHelper2(130);
+    public void test1() throws Exception {
+        sortHelper(130);
     }
-    
+
+
     /**
-     * Test a file with multiple blocks
-     * @throws IOException 
+     * Helper method for the tests: Run a test suite for a given size.
+     * Test a file with multiple blocks and print out the integers in the
+     * input-file after successful
+     * External Sort
+     * 
+     * @param numBlocks
+     *             the number of blocks
+     * 
+     * @throws IOException
      * 
      */
     public void sortHelper2(int numBlocks) throws IOException {
-        int SIZE = 4096*numBlocks;
-        int records = SIZE/8;
-        System.out.println("# records: "+records);
-        
+        int size = 4096 * numBlocks;
+        int records = size / 8;
+        System.out.println("# records: " + records);
+
         ExternalSort.clearTemp();
         FileGenerator it = new FileGenerator();
         String nameb = "input" + numBlocks + "test.bin";
         it.generateFile(nameb, numBlocks, "b"); // 1 block is size 4096
-        
+
         ExternalSort.sort(nameb);
-        
+
         RandomAccessFile raf = new RandomAccessFile(nameb, "r");
-        byte[] testBytes = new byte[SIZE];
+        byte[] testBytes = new byte[size];
         raf.read(testBytes);
         IntBuffer view = ByteBuffer.wrap(testBytes).asIntBuffer();
-        
+
         // Iterate over the input file after merge (first pass)
-        for (int i = 0; i < records ; i++) {
-            int raw = view.get(i*2);
+        for (int i = 0; i < records; i++) {
+            int raw = view.get(i * 2);
             long key = Integer.toUnsignedLong(raw);
             System.out.println("Record " + i + " key: " + key);
 
             // *2 because each record = 1 int key + 1 int value
         }
-        
-        
-        
-        
-        raf.close(); // Set breakpoint here
 
-        
-        
+        raf.close();
     }
-    
-    public void testMerge() {
-        
-    }
-    
-//    public void testFile() 
-//        throws Exception
-//    {
-//        FileGenerator it = new FileGenerator();
-//        it.generateFile("newFile", 50000, "b");
-//        
-//        ExternalSort.sort("newFile");
-//        
-//    }
+
 }
 
 
