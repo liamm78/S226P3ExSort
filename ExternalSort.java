@@ -9,7 +9,7 @@ import java.io.*;
 // -------------------------------------------------------------------------
 /**
  *
- * @author {Your Name Here}
+ * @author {Tanner and Liam}
  * @version Spring 2026
  */
 public class ExternalSort {
@@ -80,7 +80,7 @@ public class ExternalSort {
      * @param wmOffset
      *            Byte Position to start the block at in the WM.
      * @param maxBlocks
-     * @return
+     * @return Total bytes read
      * @throws IOException
      */
     public static int loadBlocks(
@@ -152,7 +152,13 @@ public class ExternalSort {
     }
 
 
-    // takes the ith record and sorts it in the heap
+    /**
+     * 
+     * takes the ith record and sorts it in the heap
+     * 
+     * @param i
+     *            the record of the heap to be percolated down
+     */
     private static void percDown(int i) {
         // integer at the ith key's record
         int iKey = ByteBuffer.wrap(wm, i * 8, 4).getInt();
@@ -201,8 +207,9 @@ public class ExternalSort {
     }
 
 
-    // calculate the last non-leaf node, then percDown that and every node
-    // before it
+    /**
+     * calculate the last non-leaf node, then percDown that and every node
+     */
     private static void heapify() {
         int start = (size - 2) / 2;
         for (int i = start; i >= 0; i--) {
@@ -211,10 +218,15 @@ public class ExternalSort {
     }
 
 
-    // fill output buffer with sorted data by swapping the min(root) value of
-    // heap into the output buffer, putting the last node a the root, then
-    // percDown to sort it.
-    // Whenever output buffer is full, we flush that data into temp.bin
+    /**
+     * 
+     * fill output buffer with sorted data by swapping the min(root) value of
+     * heap into the output buffer, putting the last node a the root, then
+     * percDown to sort it.
+     * whenever output buffer is full, we flush that data into temp.bin
+     * 
+     * @throws IOException
+     */
     public static void heapSort() throws IOException {
         int blocks = size / (BLOCKSIZE / 8);
         ByteBuffer buffer = ByteBuffer.allocate(BLOCKSIZE);
@@ -252,43 +264,48 @@ public class ExternalSort {
     }
 
 
-    /*
+    /**
+     * 
      * this will be the multi-way merge function. It assumes the temp.bin file
      * is currently full of individually sorted runs
      * either of 45056 bytes, or the last, smaller run of some multiple of 4096.
-     *
-     * This is a 2-way merge
-     *
+     * 
      * it creates three buffers, two 5 block long buffers for each compared run,
      * and one 2 block long for the new outbuffer
+     * 
      * it will load in the data from each run, then compare them record by
      * record until one of the two buffers runs out, and it will go get more
      * data.
+     * 
      * whenever the outbuffer fills up, it flushes to the original input file.
      * once both runs have been sorted, it will perform the same operation on
      * the next pair of runs.
+     * 
      * this continues until it has less then 2 runs left, in which case it
      * either copies the remaining run to the input file, or ends this iteration
      * it will then continue the process by merging the new, bigger runs back
      * into the temp file.
+     * 
      * this bounces back and forth until we have one, completely sorted run, and
      * then it will return.
      * 
-     * This file reads src and outputs into dest
+     * @param originFile
+     *            the original input file
+     * 
      */
     public static void merge(String originFile)
         throws FileNotFoundException,
-        IOException
-    {
+        IOException {
         int currentRuns = numRuns;
         long runSize = OUTBUFFER; // How long each run chunk is at a given pass.
 
         String srcFile = "temp.bin";
-        String destFile = "temp2.bin";
+        String destFile = originFile;
 
         // Keep halving currentRuns until 1
         while (currentRuns > 1) {
-            System.out.println("On pass: " + currentRuns + " runSize: " + runSize);
+            System.out.println("On pass: " + currentRuns + " runSize: "
+                + runSize);
 
             RandomAccessFile inFile = new RandomAccessFile(srcFile, "rw");
             FileChannel inChannel = inFile.getChannel();
@@ -304,7 +321,8 @@ public class ExternalSort {
                 long run1Start = (long)i * runSize;
                 long run2Start = (long)(i + 1) * runSize;
                 long run1Total = Math.min(runSize, fileSize - run1Start);
-                long run2Total = Math.min(runSize, Math.max(0, fileSize - run2Start));
+                long run2Total = Math.min(runSize, Math.max(0, fileSize
+                    - run2Start));
 
                 int outCount = 0;
                 int ptr1 = 0;
@@ -313,13 +331,13 @@ public class ExternalSort {
                 long run2Read = 0;
 
                 inChannel.position(run1Start);
-                int buf1Size =
-                    loadBlocksLimited(inChannel, 0, 5, run1Total - run1Read);
+                int buf1Size = loadBlocksLimited(inChannel, 0, 5, run1Total
+                    - run1Read);
                 run1Read += buf1Size;
 
                 inChannel.position(run2Start);
-                int buf2Size = loadBlocksLimited(inChannel, INBUF, 5,
-                    run2Total - run2Read);
+                int buf2Size = loadBlocksLimited(inChannel, INBUF, 5, run2Total
+                    - run2Read);
                 run2Read += buf2Size;
 
                 // Merge while both runs have data (in-memory or on disk)
@@ -329,9 +347,10 @@ public class ExternalSort {
                     // Reload buf1 if we've consumed what's in memory
                     if (ptr1 >= buf1Size) {
                         inChannel.position(run1Start + run1Read);
-                        buf1Size = loadBlocksLimited(inChannel, 0, 5,
-                            run1Total - run1Read);
-                        if (buf1Size == 0) break;
+                        buf1Size = loadBlocksLimited(inChannel, 0, 5, run1Total
+                            - run1Read);
+                        if (buf1Size == 0)
+                            break;
                         run1Read += buf1Size;
                         ptr1 = 0;
                     }
@@ -341,7 +360,8 @@ public class ExternalSort {
                         inChannel.position(run2Start + run2Read);
                         buf2Size = loadBlocksLimited(inChannel, INBUF, 5,
                             run2Total - run2Read);
-                        if (buf2Size == 0) break;
+                        if (buf2Size == 0)
+                            break;
                         run2Read += buf2Size;
                         ptr2 = INBUF;
                     }
@@ -356,11 +376,13 @@ public class ExternalSort {
                     int key2 = ByteBuffer.wrap(wm, ptr2, 4).getInt();
 
                     if (key1 <= key2) {
-                        System.arraycopy(wm, ptr1, wm, OUTBUF_START + (outCount * 8), 8);
+                        System.arraycopy(wm, ptr1, wm, OUTBUF_START + (outCount
+                            * 8), 8);
                         ptr1 += 8;
                     }
                     else {
-                        System.arraycopy(wm, ptr2, wm, OUTBUF_START + (outCount * 8), 8);
+                        System.arraycopy(wm, ptr2, wm, OUTBUF_START + (outCount
+                            * 8), 8);
                         ptr2 += 8;
                     }
                     outCount++;
@@ -372,7 +394,8 @@ public class ExternalSort {
                         outFile.write(wm, OUTBUF_START, OUTBUF_SIZE);
                         outCount = 0;
                     }
-                    System.arraycopy(wm, ptr1, wm, OUTBUF_START + (outCount * 8), 8);
+                    System.arraycopy(wm, ptr1, wm, OUTBUF_START + (outCount
+                        * 8), 8);
                     ptr1 += 8;
                     outCount++;
                 }
@@ -380,9 +403,10 @@ public class ExternalSort {
                 while (run1Read < run1Total) {
                     if (ptr1 >= buf1Size) {
                         inChannel.position(run1Start + run1Read);
-                        buf1Size = loadBlocksLimited(inChannel, 0, 5,
-                            run1Total - run1Read);
-                        if (buf1Size == 0) break;
+                        buf1Size = loadBlocksLimited(inChannel, 0, 5, run1Total
+                            - run1Read);
+                        if (buf1Size == 0)
+                            break;
                         run1Read += buf1Size;
                         ptr1 = 0;
                     }
@@ -390,7 +414,8 @@ public class ExternalSort {
                         outFile.write(wm, OUTBUF_START, OUTBUF_SIZE);
                         outCount = 0;
                     }
-                    System.arraycopy(wm, ptr1, wm, OUTBUF_START + (outCount * 8), 8);
+                    System.arraycopy(wm, ptr1, wm, OUTBUF_START + (outCount
+                        * 8), 8);
                     ptr1 += 8;
                     outCount++;
                 }
@@ -401,7 +426,8 @@ public class ExternalSort {
                         outFile.write(wm, OUTBUF_START, OUTBUF_SIZE);
                         outCount = 0;
                     }
-                    System.arraycopy(wm, ptr2, wm, OUTBUF_START + (outCount * 8), 8);
+                    System.arraycopy(wm, ptr2, wm, OUTBUF_START + (outCount
+                        * 8), 8);
                     ptr2 += 8;
                     outCount++;
                 }
@@ -411,7 +437,8 @@ public class ExternalSort {
                         inChannel.position(run2Start + run2Read);
                         buf2Size = loadBlocksLimited(inChannel, INBUF, 5,
                             run2Total - run2Read);
-                        if (buf2Size == 0) break;
+                        if (buf2Size == 0)
+                            break;
                         run2Read += buf2Size;
                         ptr2 = INBUF;
                     }
@@ -419,7 +446,8 @@ public class ExternalSort {
                         outFile.write(wm, OUTBUF_START, OUTBUF_SIZE);
                         outCount = 0;
                     }
-                    System.arraycopy(wm, ptr2, wm, OUTBUF_START + (outCount * 8), 8);
+                    System.arraycopy(wm, ptr2, wm, OUTBUF_START + (outCount
+                        * 8), 8);
                     ptr2 += 8;
                     outCount++;
                 }
@@ -431,7 +459,8 @@ public class ExternalSort {
                 }
             }
 
-            // If odd number of runs, copy the last unpaired run straight to dest
+            // If odd number of runs, copy the last unpaired run straight to
+            // dest
             if (currentRuns % 2 != 0) {
                 long lastRunStart = (long)(currentRuns - 1) * runSize;
                 inChannel.position(lastRunStart);
@@ -462,6 +491,13 @@ public class ExternalSort {
     }
 
 
+    /**
+     * 
+     * clears temp file so we can retest without just appending to a the file of
+     * a previous test
+     * 
+     * @throws IOException
+     */
     public static void clearTemp() throws IOException {
         new FileOutputStream("temp.bin").close();
     }
