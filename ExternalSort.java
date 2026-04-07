@@ -63,11 +63,9 @@ public class ExternalSort {
             heapify();
             heapSort();
         }
-        merge(theFileName);
-
-        // merge(theFileName); // Sorts runs into temp.bin. -> theFileName.bin
-
+        // Close before merge
         raf.close();
+        merge(theFileName);
     }
 
 
@@ -301,7 +299,7 @@ public class ExternalSort {
         long runSize = OUTBUFFER; // How long each run chunk is at a given pass.
 
         String srcFile = "temp.bin";
-        String destFile = "temp2.bin";
+        String destFile = originFile;
 
         // Keep halving currentRuns until 1
         while (currentRuns > 1) {
@@ -487,8 +485,11 @@ public class ExternalSort {
             runSize *= 2;
         }
 
-        // Write the final sorted result back to the original input file
-        SortUtils.copyFile(srcFile, originFile);
+        // This is so we always merge the sorted data back into the original
+        // input file
+        if (!srcFile.equals(originFile)) {
+            SortUtils.copyFile(srcFile, originFile);
+        }
     }
 
 
